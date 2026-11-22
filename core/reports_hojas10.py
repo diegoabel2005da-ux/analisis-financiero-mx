@@ -150,6 +150,8 @@ def hoja_capitales(wb, f, p, X):
     pfs = p["perfiles"]
     for j, pf in enumerate(pfs):
         ws.write(CAP_R0 - 1, 19 + j, f"$ {pf}", hw)
+    c_per = 19 + len(pfs)
+    ws.write(CAP_R0 - 1, c_per, "Perspectivas (análisis del equipo)", hw)
     simbolos = [a.get("simbolo", "") for a in acc]
     tick_corr = [s for s in simbolos if corr is not None and not corr.empty and s in corr.columns]
     m0 = CAP_R0 + n + 5  # fila de encabezado de la matriz de correlaciones
@@ -180,6 +182,7 @@ def hoja_capitales(wb, f, p, X):
                                 f'&IF(AND(R{R}<>"",R{R}<0.3)," → aporta diversificación","")&IF(Q{R}>0.5," · buen rendimiento por riesgo",""))', f.txt)
         for j, pf in enumerate(pfs):
             ws.write_formula(r, 19 + j, f"={N}!{COL(8 + j)}{X['a0'] + 1 + i}", f.mon)
+        ws.write(r, c_per, a.get("perspectivas") or "Capturar en la plataforma (pestaña 3)", f.txt if a.get("perspectivas") else f.nota)
     rt = CAP_R0 + n
     ws.write(rt, 1, "TOTAL / PROMEDIO", f.lab)
     ws.write_formula(rt, 11, f"=AVERAGE(L{CAP_R0 + 1}:L{rt})", f.num)
@@ -215,7 +218,7 @@ def hoja_capitales(wb, f, p, X):
     else:
         ws.write(m0 + 1, 1, "Sin series de precios suficientes: la plataforma calcula la matriz al descargar los datos de Yahoo.", f.nota)
     ws.set_column("A:A", 2); ws.set_column("B:B", 16); ws.set_column("C:C", 13); ws.set_column("D:F", 12); ws.set_column("G:R", 13)
-    ws.set_column("S:S", 70); ws.set_column("T:Z", 15)
+    ws.set_column("S:S", 70); ws.set_column(19, c_per - 1, 15); ws.set_column(c_per, c_per, 60)
     return {"mercado": f"{q(H_CAP)}!$D${CAP_R0 + 1}:$D${rt}", "beta": f"{q(H_CAP)}!$L${CAP_R0 + 1}:$L${rt}", "rt": rt}
 
 

@@ -140,13 +140,16 @@ def _fila(tipo, nombre, dias, precio, tasa, ret_h, dur_venta, reinv, monto, vn, 
             "nota": sens_extra}
 
 
-def seleccionar(tabla: pd.DataFrame, horizonte: int, perfil: str, puntaje: float | None = None) -> tuple[pd.DataFrame, dict]:
+def seleccionar(tabla: pd.DataFrame, horizonte: int, perfil: str, puntaje: float | None = None,
+                forzar: str | None = None) -> tuple[pd.DataFrame, dict]:
     """Algoritmo de selección (reglas explícitas):
     1. Elegibilidad por perfil: CONSERVADOR sólo instrumentos que venzan dentro del horizonte (+30 días) o de tasa variable;
        MODERADO hasta 3× el horizonte o tasa variable; AGRESIVO todos.
     2. Puntaje = w_r·z(rendimiento) − w_m·z(pérdida ante +100 pb) − w_reinv·(riesgo de reinversión/3) − w_inf·(riesgo de inflación/3),
        con ponderaciones del perfil (o interpoladas con el puntaje del perfilador). z = normalización mín-máx.
     3. Se elige el puntaje más alto.
+    Capital: sólo son elegibles los instrumentos que el capital alcanza a comprar (al menos 1 título).
+    forzar: nombre de un instrumento elegido por el usuario (sustituye al automático; la justificación lo indica).
     """
     t = tabla.copy()
     if perfil == "CONSERVADOR":
@@ -158,6 +161,8 @@ def seleccionar(tabla: pd.DataFrame, horizonte: int, perfil: str, puntaje: float
         ok = (t["plazo_días"] <= lim + 30) | (t["tipo"] == "BONDES F")
     else:
         ok = pd.Series(True, index=t.index)
+    if "títulos" in t:
+        ok = ok & (t["títulos"] >= 1)
     t["elegible"] = ok
     w = pesos_desde_puntaje(puntaje) if perfil == "PERSONALIZADO" and puntaje is not None else PESOS_PERFIL.get(perfil, PESOS_PERFIL["MODERADO"])
     e = t[t.elegible]
@@ -169,9 +174,16 @@ def seleccionar(tabla: pd.DataFrame, horizonte: int, perfil: str, puntaje: float
     t.loc[e.index, "puntaje"] = (w[0] * nz(e["rend_horizonte"]) - w[1] * nz(e["duración_al_vender"])
                                  - w[2] * e["riesgo_reinversión"] / 3 - w[3] * e["riesgo_inflación"] / 3)
     i = t["puntaje"].idxmax()
+    auto = t.loc[i, "instrumento"]
+    if forzar and forzar in set(t["instrumento"]):
+        i = t.index[t["instrumento"] == forzar][0]
     t["seleccionado"] = t.index == i
     s = t.loc[i]
-    just = (f"Para un perfil {perfil.lower()} y un horizonte de {horizonte} días se elige {s['instrumento']}: rendimiento esperado al "
+    if s["instrumento"] != auto:
+        pre = f"Elegido por el usuario (la selección automática recomendaba {auto}). "
+    else:
+        pre = ""
+    just = pre + (f"Para un perfil {perfil.lower()} y un horizonte de {horizonte} días se elige {s['instrumento']}: rendimiento esperado al "
             f"horizonte de {s['rend_horizonte']*100:.2f}% con tasas sin cambio, pérdida aproximada de {abs(s['pérdida_+100pb'])*100:.2f}% "
             f"si las tasas suben 100 pb antes de venderlo, riesgo de reinversión {['','bajo','medio','alto'][int(s['riesgo_reinversión'])]} "
             f"y de inflación {['','bajo','medio','alto'][int(s['riesgo_inflación'])]}. Ponderaciones del puntaje: rendimiento {w[0]:.2f}, "

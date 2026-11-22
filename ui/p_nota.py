@@ -137,6 +137,9 @@ def construir(base: dict, respuestas: dict | None = None, margenes: dict | None 
         if "CL" in precios:
             precios.setdefault("MCL", precios["CL"]); vols.setdefault("MCL", vols["CL"])
         cat = fm.preparar_catalogo(precios, vols, usdmxn, margenes)
+    excl = set(base.get("futuros_excluidos") or [])
+    if excl:
+        cat.loc[cat["clave"].isin(excl), "asignable"] = False  # contratos que el usuario decidió no usar
     respuestas = respuestas or st.session_state.get("nota_resp")
     asg = pfm.asignacion(respuestas) if respuestas else None
     b = copy.deepcopy(base)
@@ -219,6 +222,19 @@ def nota_estructurada():
         sel = pd.DataFrame([{"perfil": pf, "instrumento": v["instrumento"], "rend. al horizonte": v["rend_horizonte"], "duración": v["duración"],
                              "justificación": v["justificación"]} for pf, v in p["renta_fija"].items()])
         st.dataframe(sel, hide_index=True, width="stretch", column_config={"rend. al horizonte": st.column_config.NumberColumn(format="percent")})
+        st.markdown("**Elegir otro instrumento (opcional)**")
+        opciones = ["Automático"] + list(tabla["instrumento"])
+        man = dict(base.get("rf_manual") or {})
+        cols_m = st.columns(len(p["perfiles"]))
+        for i, pf in enumerate(p["perfiles"]):
+            v = cols_m[i].selectbox(pf, opciones, index=opciones.index(man[pf]) if man.get(pf) in opciones else 0, key=f"rfm_{pf}")
+            if v == "Automático":
+                man.pop(pf, None)
+            else:
+                man[pf] = v
+        if man != (base.get("rf_manual") or {}):
+            base["rf_manual"] = man
+            st.rerun()
         st.markdown("**Características y riesgos**")
         st.dataframe(pd.DataFrame([{"instrumento": k, **v, "riesgo de mercado": rfj.RIESGOS[k]["mercado"][1],
                                     "riesgo de inflación": rfj.RIESGOS[k]["inflación"][1], "riesgo de reinversión": rfj.RIESGOS[k]["reinversión"][1]}
@@ -233,13 +249,14 @@ def nota_estructurada():
         base["modo_rend"] = "manual" if modo.startswith("Manual") else "capm"
         perf_cols = nt.PERFILES
         tc = pd.DataFrame([{"acción": x["nombre"], "símbolo": x["simbolo"], "mercado": x.get("mercado", ""), "sector": x.get("sector", ""),
-                            "beta": x["beta"], "rendimiento manual %": x["rend_manual"] * 100,
+                            "beta": x["beta"], "rendimiento manual %": x["rend_manual"] * 100, "perspectivas": x.get("perspectivas", ""),
                             **{f"peso {pf} %": x["pesos"].get(pf, 0) * 100 for pf in perf_cols}} for x in base["acciones"]])
         edc = st.data_editor(tc, num_rows="dynamic", width="stretch", key="ed_canasta2")
         acciones = []
         for _, r in edc.dropna(subset=["acción"]).iterrows():
             acciones.append({"nombre": str(r["acción"]), "simbolo": str(r.get("símbolo") or ""), "mercado": str(r.get("mercado") or ""),
                              "sector": str(r.get("sector") or ""), "beta": float(r["beta"] or 0), "rend_manual": float(r["rendimiento manual %"] or 0) / 100,
+                             "perspectivas": str(r.get("perspectivas") or "") if str(r.get("perspectivas") or "") != "nan" else "",
                              "pesos": {pf: float(r[f"peso {pf} %"] or 0) / 100 for pf in perf_cols}})
         base["acciones"] = acciones
         for pf in perf_cols:
@@ -274,6 +291,12 @@ def nota_estructurada():
     # ------------------------------------------------------------------ 4
     with tabs[3]:
         st.subheader("Catálogo de futuros (16 contratos, 6 clases de activo)")
+        nombres_f = {c["clave"]: f'{c["clave"]} · {c["nombre"]}' for c in fm.CATALOGO}
+        excl = st.multiselect("Contratos que NO desea usar (los demás se asignan según la mezcla del perfil)", list(nombres_f),
+                              default=[k for k in base.get("futuros_excluidos", []) if k in nombres_f], format_func=nombres_f.get)
+        if excl != list(base.get("futuros_excluidos") or []):
+            base["futuros_excluidos"] = excl
+            st.rerun()
         cat = p.get("futuros_cat")
         if not cat["asignable"].any():
             st.error("No se obtuvieron precios de futuros o el tipo de cambio de Yahoo: ningún contrato es asignable.")

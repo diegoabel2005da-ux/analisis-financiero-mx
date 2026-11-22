@@ -517,3 +517,17 @@ def test_params_nota_incompletos_se_detectan():
                                           "udibono_real": {20: 0.047}}, "inflacion": 0.03, "udi": 8.8},
                     futuros_cat=__import__("core.futuros_multi", fromlist=["x"]).preparar_catalogo({"ZN": 112.5}, {"ZN": 0.06}, 18.0))
     assert nt.params_completos(p)
+
+
+def test_renta_fija_eleccion_manual_y_capital():
+    from core import renta_fija as rfj
+    tasas = {"cetes": {28: 0.06, 91: 0.062, 182: 0.064}, "bono_m": {10: 0.095}, "bondes_f_sobretasa": 0.002, "tiie_fondeo": 0.07,
+             "udibono_real": {20: 0.047}}
+    t = rfj.evaluar(tasas, 91, 2_000_000, 0.03, 8.8)
+    _, auto = rfj.seleccionar(t, 91, "MODERADO")
+    otro = next(i for i in t["instrumento"] if i != auto["instrumento"])
+    _, man = rfj.seleccionar(t, 91, "MODERADO", forzar=otro)
+    assert man["instrumento"] == otro and man["justificación"].startswith("Elegido por el usuario")
+    t2 = rfj.evaluar(tasas, 91, 50.0, 0.03, 8.8)        # $50 no alcanza para un Bono M de $100
+    tab, sel = rfj.seleccionar(t2, 91, "AGRESIVO")
+    assert sel["tipo"] == "CETES" and not tab.loc[tab["tipo"] == "BONOS M", "elegible"].any()

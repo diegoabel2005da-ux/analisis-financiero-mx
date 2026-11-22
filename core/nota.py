@@ -115,7 +115,8 @@ def preparar(base: dict, nombre: str, S0: float, sigma: float, beta: float, r_co
         tabla = rfj.evaluar(renta_fija["tasas"], p["dias"], p["inversion"], renta_fija["inflacion"], renta_fija.get("udi"))
         p["renta_fija_tabla"] = tabla
         for pf in p["perfiles"]:
-            _, sel = rfj.seleccionar(tabla, p["dias"], pf, p.get("puntaje") if pf == "PERSONALIZADO" else None)
+            _, sel = rfj.seleccionar(tabla, p["dias"], pf, p.get("puntaje") if pf == "PERSONALIZADO" else None,
+                                     forzar=(p.get("rf_manual") or {}).get(pf))
             p["renta_fija"][pf] = sel
     p["futuros"] = {}
     if futuros_cat is not None:

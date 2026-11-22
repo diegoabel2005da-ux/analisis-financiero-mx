@@ -6,6 +6,8 @@ Todo lo demás (precios, rendimientos, primas Black-Scholes, escenarios, ficha d
 """
 from __future__ import annotations
 
+import datetime as dt
+
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +19,14 @@ from .renta_fija import FICHAS, RIESGOS
 
 H_NOTA, H_PERFIL, H_RF, H_FUT = "NOTA ESTRUCTURADA", "PERFIL", "RENTA FIJA", "FUTUROS MULTIACTIVO"
 H_DASH, H_CAP = "DASHBOARD", "MERCADO DE CAPITALES"
+RIESGO_CLASE = {
+    "Índice bursátil": "Mercado accionario: caídas del índice; apalancamiento y llamadas de margen",
+    "Divisa": "Tipo de cambio: movimientos bruscos por política monetaria o eventos políticos",
+    "Tasa de interés": "Tasas: el precio baja si suben los rendimientos",
+    "Energético": "Precio muy volátil por oferta, inventarios y geopolítica",
+    "Metal": "Precio sensible al dólar, a tasas reales y a la demanda industrial",
+    "Materia prima agrícola": "Clima, cosechas y estacionalidad; límites diarios de precio",
+}
 CAP_R0 = 7  # primera fila (0-based) de acciones en MERCADO DE CAPITALES
 # Entradas del cliente en el DASHBOARD (la NOTA las lee por fórmula)
 IN_INV, IN_DIAS, IN_PRM, IN_RF, IN_TOPE = (f"'{H_DASH}'!$D$6", f"'{H_DASH}'!$D$7", f"'{H_DASH}'!$D$8", f"'{H_DASH}'!$D$9", f"'{H_DASH}'!$D$10")
@@ -76,9 +86,12 @@ def hoja_renta_fija(wb, f, p: dict, tabla, fuentes: dict):
     ws.write("D6", fuentes.get("udi", ""), f.nota)
     hdr = ["Tipo", "Instrumento", "Plazo (días)", "Valor nominal", "Tasa anual", "Tasa real", "Precio por título",
            "Rend. al horizonte", "Duración al vender", "Pérdida si +100 pb", "R. crédito", "R. mercado", "R. inflación",
-           "R. reinversión", "R. liquidez", "Pagos", "Fuente de la tasa"]
+           "R. reinversión", "R. liquidez", "Pagos", "Fuente de la tasa", "Fecha de vencimiento (aprox.)", "Monto mínimo y condiciones",
+           "Justificación de su incorporación"]
     for j, e in enumerate(hdr):
         ws.write(7, 1 + j, e, f.head)
+    fv = p.get("fecha_valuacion") or dt.date.today()
+    ws.write("B7", "Fecha de valuación", f.lab_r); ws.write_datetime("C7", dt.datetime.combine(fv, dt.time()), f.fecha)
     filas = {}
     for i, row in tabla.reset_index(drop=True).iterrows():
         r = 8 + i
@@ -119,12 +132,15 @@ def hoja_renta_fija(wb, f, p: dict, tabla, fuentes: dict):
             ws.write(r, 11 + j, NIVEL[int(row[k])], f.txt_c)
         ws.write(r, 16, row["pagos"], f.txt)
         ws.write(r, 17, fuentes.get(tipo, ""), f.nota)
+        ws.write_formula(r, 18, f"=$C$7+D{R}", f.fecha)
+        ws.write_formula(r, 19, f'="1 título = $"&TEXT(H{R},"#,##0.00")&"; compra en múltiplos de 1 título vía intermediario autorizado o cetesdirecto"', f.txt)
+        ws.write(r, 20, FICHAS[tipo]["justificación"], f.txt)
     fin = 8 + len(tabla)
     ws.write(fin, 1, "Duración de Bonos M y Udibonos: Σ t·VP / P / (1 + y·182/360), calculada por la plataforma con flujos semestrales. "
                      "Precios de Bonos M y Udibonos de referencia emitidos a la par (cupón = rendimiento).", f.nota)
     # Selección por perfil
     s0 = fin + 3
-    ws.merge_range(s0, 1, s0, 9, "SELECCIÓN AUTOMÁTICA POR PERFIL", f.head)
+    ws.merge_range(s0, 1, s0, 9, "SELECCIÓN POR PERFIL (automática; el usuario puede elegir otra en la plataforma)", f.head)
     for j, e in enumerate(["Perfil", "Instrumento elegido", "Rend. al horizonte", "Duración", "Precio por título", "Monto KRF",
                            "Títulos", "Sobrante", "Justificación"]):
         ws.write(s0 + 1, 1 + j, e, f.head_t)
@@ -146,7 +162,8 @@ def hoja_renta_fija(wb, f, p: dict, tabla, fuentes: dict):
         sel_cells[pf] = {"rend": f"{q(H_RF)}!$D${R}", "dur": f"{q(H_RF)}!$E${R}", "inst": f"{q(H_RF)}!$C${R}"}
     ws.write(s0 + 2 + len(p["perfiles"]) + 1, 1, "Algoritmo: (1) elegibilidad por perfil — conservador sólo instrumentos que vencen dentro del "
              "horizonte o de tasa variable; moderado hasta 3× el horizonte; agresivo todos. (2) puntaje = w_r·rendimiento − w_m·riesgo de "
-             "mercado − w_reinv·reinversión − w_inf·inflación (normalizados). (3) se elige el mayor puntaje.", f.nota)
+             "mercado − w_reinv·reinversión − w_inf·inflación (normalizados). (3) se elige el mayor puntaje. Capital: sólo instrumentos que "
+             "el monto alcanza a comprar (≥ 1 título).", f.nota)
     # Fichas y riesgos
     t0 = s0 + 2 + len(p["perfiles"]) + 4
     ws.merge_range(t0, 1, t0, 9, "CARACTERÍSTICAS Y RIESGOS DE CADA INSTRUMENTO", f.head)
@@ -162,7 +179,7 @@ def hoja_renta_fija(wb, f, p: dict, tabla, fuentes: dict):
     ws.write(t0 + 7, 1, "Ningún instrumento gubernamental está libre de todo riesgo: el riesgo de crédito soberano es bajo, pero hay riesgo "
                         "de mercado, inflación, reinversión y liquidez. Fuente de características: Banxico, Mercado de valores gubernamentales, cap. II.", f.nota)
     ws.set_column("A:A", 2); ws.set_column("B:B", 12); ws.set_column("C:C", 20); ws.set_column("D:K", 13); ws.set_column("L:P", 11)
-    ws.set_column("Q:Q", 34); ws.set_column("R:R", 50)
+    ws.set_column("Q:Q", 34); ws.set_column("R:R", 50); ws.set_column("S:S", 14); ws.set_column("T:T", 60); ws.set_column("U:U", 60)
     return sel_cells
 
 
@@ -176,7 +193,7 @@ def hoja_futuros_multi(wb, f, p: dict, res: dict, usdmxn: float, z_cells: list):
     ws.write("B5", "Horizonte T (años)", f.lab_r); ws.write_formula("C5", f"={q(H_NOTA)}!$E$5/365", f.num4)
     hdr = ["Clave", "Contrato", "Clase", "Bolsa", "Tamaño", "Vencimiento", "Precio", "Multiplicador", "¿Precio en MXN?",
            "Valor del contrato (MXN)", "Margen inicial (MXN)", "Margen mant. (MXN)", "Valor del tick (MXN)", "Apalancamiento",
-           "Volatilidad anual", "Margen inicial (orig.)", "Moneda margen", "Fuente"]
+           "Volatilidad anual", "Margen inicial (orig.)", "Moneda margen", "Fuente", "Riesgo principal"]
     for j, e in enumerate(hdr):
         ws.write(6, 1 + j, e, f.head)
     fila_c = {}
@@ -213,6 +230,7 @@ def hoja_futuros_multi(wb, f, p: dict, res: dict, usdmxn: float, z_cells: list):
         if not np.isnan(row["vol_anual"]):
             ws.write_number(r, 15, float(row["vol_anual"]), f.pct_in)
         ws.write(r, 18, o["fuente"], f.nota)
+        ws.write(r, 19, RIESGO_CLASE.get(o["clase"], ""), f.nota)
     fin = 7 + len(cat)
     ws.write(fin, 1, "El margen inicial es una garantía de cumplimiento, no el costo del activo: el valor del contrato es el nocional. "
                      "Márgenes de intermediario con fecha; actualícelos antes de operar. Volatilidad: desv. est. de rend. log diarios (Yahoo) × √252.", f.nota)

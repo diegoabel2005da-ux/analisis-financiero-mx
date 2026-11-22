@@ -34,6 +34,30 @@ def _horizonte(key):
     return (f - hoy).days / 365, f
 
 
+def _selector_vencimiento(contenedor, key):
+    """Próximos vencimientos MexDer calculados por regla (tercer viernes, ciclo trimestral) o fecha manual."""
+    hoy = cm.dat.ahora_mx().date()
+    opciones = [v.isoformat() for v in cm.vencimientos(4)] + ["Otra fecha (manual)"]
+    sel = contenedor.selectbox("Vencimiento", opciones, key=f"venc_{key}",
+                               help="Tercer viernes de mar/jun/sep/dic, o día hábil anterior si es inhábil "
+                                    "(días inhábiles en data/dias_inhabiles.csv).")
+    if sel.startswith("Otra"):
+        return contenedor.date_input("Fecha manual", hoy + dt.timedelta(days=90), min_value=hoy + dt.timedelta(days=1),
+                                     key=f"vencm_{key}"), False
+    return dt.date.fromisoformat(sel), True
+
+
+def _r_q(c_r, c_q, key):
+    rf, txt_r = cm.rf_corto()
+    qd, txt_q = cm.dividendo_auto()
+    r = c_r.number_input("Tasa libre de riesgo % (cont.)", value=float(round(rf * 100, 4)), step=0.1, key=f"r_{key}",
+                         help=txt_r) / 100
+    q = c_q.number_input("Rendimiento por dividendo % (cont.)", value=float(round(qd * 100, 4)), step=0.1, key=f"q_{key}",
+                         help=txt_q) / 100
+    st.caption(f"Tasa: {txt_r} · Dividendo: {txt_q}")
+    return r, q
+
+
 # =========================================================================== 8
 def futuros():
     st.title("Contratos de futuros")
@@ -48,12 +72,13 @@ def futuros():
                    "TEÓRICO de simulación.")
     hoy = cm.dat.ahora_mx().date()
     st.subheader("Información contractual")
-    st.caption("Capture los datos de las Condiciones Generales de Contratación y del boletín de MexDer. Los valores "
-               "precargados son marcadores editables, NO datos verificados.")
+    st.caption("Términos según la página de contratos de futuro de bmv.com.mx: 100 acciones por contrato, ciclo trimestral "
+               "(mar, jun, sep, dic), puja de $0.01 y vencimiento el tercer viernes del mes (o el día hábil anterior si es "
+               "inhábil). Precio observado, volumen, interés abierto y AIM sólo se conocen con el boletín de MexDer.")
     c = st.columns(4)
     simb = c[0].text_input("Símbolo del contrato", fila.get("clave_futuro") or "")
-    venc = c[1].date_input("Vencimiento (verificar en MexDer)", hoy + dt.timedelta(days=90), min_value=hoy + dt.timedelta(days=1))
-    venc_ok = c[2].checkbox("Vencimiento verificado contra MexDer", False)
+    venc, venc_ok = _selector_vencimiento(c[1], "fut")
+    c[2].write("")
     liq = c[3].selectbox("Liquidación", ["En especie (física)", "En efectivo (financiera)"])
     c = st.columns(4)
     M = c[0].number_input("Multiplicador / tamaño (acciones por contrato)", value=100.0, step=1.0)
@@ -64,9 +89,8 @@ def futuros():
     vol_c = c[0].number_input("Volumen (observado)", value=0, step=1)
     oi = c[1].number_input("Interés abierto (observado)", value=0, step=1)
     com = c[2].number_input("Comisión por contrato (MXN)", value=0.0)
-    r = c[3].number_input("Tasa libre de riesgo % (cont.)", value=7.0, step=0.1) / 100
-    q = st.number_input("Rendimiento por dividendo % (cont.)", value=0.0, step=0.1) / 100
-    T = (venc - hoy).days / 365
+    r, q = _r_q(c[3], st, "fut")
+    T = max((venc - hoy).days, 1) / 365
     Fteo = fu.precio_teorico(S, r, q, T)
     F0 = Fobs if Fobs > 0 else Fteo
     m = st.columns(5)
@@ -77,7 +101,7 @@ def futuros():
     m[4].metric("Tamaño nocional del contrato", cm.fmt(F0 * M, 0))
     cm.etiqueta("Precio OBSERVADO" if Fobs > 0 else "Precio TEÓRICO (no es cotización MexDer)", "ok" if Fobs > 0 else "teorico")
     if not venc_ok:
-        cm.etiqueta("Vencimiento no verificado: los resultados son de simulación", "alerta")
+        cm.etiqueta("Fecha de vencimiento capturada manualmente: verifíquela contra MexDer", "alerta")
     if Fobs > 0:
         st.write(f"Base observada (F − S): {Fobs - S:,.4f} · Base teórica: {Fteo - S:,.4f}")
     st.caption("Los futuros no se clasifican como americanos o europeos: no tienen ejercicio.")
@@ -156,13 +180,12 @@ def opciones():
     c = st.columns(4)
     tipo = c[0].selectbox("Tipo", ["call", "put"])
     K = c[1].number_input("Strike", value=float(round(S, 2)), step=0.5)
-    venc = c[2].date_input("Vencimiento (verificar en MexDer)", hoy + dt.timedelta(days=91), min_value=hoy + dt.timedelta(days=1))
+    venc, _ = _selector_vencimiento(c[2], "opc")
     estilo = c[3].selectbox("Estilo de ejercicio", ["Europeo", "Americano"])
     c = st.columns(4)
     S_in = c[0].number_input("Precio spot", value=S)
     sig = c[1].number_input("Volatilidad % (predet.: histórica 1 año)", value=float(round(vol * 100, 2)), step=0.5) / 100
-    r = c[2].number_input("Tasa libre de riesgo % (cont.)", value=7.0, step=0.1) / 100
-    q = c[3].number_input("Dividendo % (cont.)", value=0.0, step=0.1) / 100
+    r, q = _r_q(c[2], c[3], "opc")
     c = st.columns(4)
     M = c[0].number_input("Multiplicador", value=100.0)
     liq = c[1].selectbox("Liquidación", ["En especie", "En efectivo"])
@@ -173,7 +196,7 @@ def opciones():
     ask = c[1].number_input("Ask", value=0.0, format="%.4f")
     vol_c = c[2].number_input("Volumen", value=0, step=1)
     oi = c[3].number_input("Interés abierto", value=0, step=1)
-    T = (venc - hoy).days / 365
+    T = max((venc - hoy).days, 1) / 365
     teo = op.bsm(S_in, K, T, r, q, sig, tipo)
     g = op.griegas(S_in, K, T, r, q, sig, tipo)
     amer = estilo == "Americano"
@@ -263,12 +286,17 @@ def opciones():
 
 # =========================================================================== 10
 def _token():
+    tk = cm.token_banxico()
     try:
-        tk = st.secrets.get("BANXICO_TOKEN", "")
+        en_secrets = bool(st.secrets.get("BANXICO_TOKEN", ""))
     except Exception:
-        tk = ""
-    return st.text_input("Token del SIE-API de Banxico (gratuito)", value=st.session_state.get("tk_banxico", tk), type="password",
-                         help="Obténgalo en https://www.banxico.org.mx/SieAPIRest/service/v1/token") or ""
+        en_secrets = False
+    if en_secrets:
+        st.caption("Token de Banxico configurado en Secrets: consulta automática activa.")
+        return tk
+    return st.text_input("Token del SIE-API de Banxico (gratuito)", value=tk, type="password",
+                         help="Obténgalo en https://www.banxico.org.mx/SieAPIRest/service/v1/token y guárdelo en Secrets "
+                              "como BANXICO_TOKEN para no capturarlo cada vez.") or ""
 
 
 @st.cache_data(ttl=6 * 3600, show_spinner="Consultando Banxico…")
@@ -324,24 +352,19 @@ def _editor_curva():
     st.warning("Una curva gubernamental (Cetes) NO equivale a la curva OIS de TIIE de Fondeo usada por el mercado de swaps. "
                "Para valuaciones de mercado importe una curva verificada de un proveedor de precios autorizado.")
     base = st.session_state.get("curva_nodos")
+    t_auto = cm.tasas_auto()
+    if base is None and t_auto is not None and not t_auto["nodos_curva"].empty:
+        base = t_auto["nodos_curva"]
+        st.session_state["curva_fuente"] = "Banxico SIE (TIIE de Fondeo + Cetes), carga automática"
+        st.success("Curva cargada automáticamente con las últimas tasas publicadas por Banxico.")
     c1, c2 = st.columns(2)
-    if c1.button("Precargar Cetes 28/91/182/364 + TIIE de Fondeo desde Banxico"):
-        tk = st.session_state.get("tk_banxico", "")
-        if not tk:
-            st.error("Capture el token de Banxico en la pestaña anterior.")
+    if c1.button("Recargar desde Banxico (TIIE de Fondeo + Cetes 28/91/182/364)"):
+        if t_auto is None:
+            st.error("Sin token de Banxico o la consulta falló: " + str(st.session_state.get("error_banxico", "configure BANXICO_TOKEN")))
         else:
-            ult, err = _banxico(tuple(["SF331451"] + list(rt.PLAZO_CETES)), tk)
-            if err or ult.empty:
-                st.error(f"No fue posible obtener las tasas: {err}")
-            else:
-                filas = []
-                for _, r in ult.iterrows():
-                    d = 1 if r["serie"] == "SF331451" else rt.PLAZO_CETES[r["serie"]]
-                    filas.append({"dias": d, "tasa_pct": r["valor_%"], "convencion": "simple ACT/360",
-                                  "fuente": f"Banxico {r['serie']} {r['fecha'].date()}"})
-                base = pd.DataFrame(filas).sort_values("dias")
-                st.session_state["curva_nodos"] = base
-                st.session_state["curva_fuente"] = "Banxico SIE (Cetes + TIIE de Fondeo)"
+            base = t_auto["nodos_curva"]
+            st.session_state["curva_nodos"] = base
+            st.session_state["curva_fuente"] = "Banxico SIE (TIIE de Fondeo + Cetes)"
     up = c2.file_uploader("Importar curva (CSV: dias, tasa_pct, convencion)", type=["csv", "xlsx"])
     if up:
         try:

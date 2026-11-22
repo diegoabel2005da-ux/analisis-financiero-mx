@@ -142,7 +142,8 @@ def _dcf(df):
     st.markdown("**Supuestos (editables; son hipótesis del analista, no datos observados)**")
     c1, c2, c3, c4 = st.columns(4)
     fcff0 = c1.number_input("FCFF base (MXN)", value=float(fcff_h.dropna().iloc[-1]) if fcff_h.dropna().size else 1.0e9, format="%.0f")
-    rf = c2.number_input("Tasa libre de riesgo % (p. ej. M Bono 10a)", value=9.0, step=0.1) / 100
+    rf_l, txt_rf = cm.rf_largo()
+    rf = c2.number_input("Tasa libre de riesgo % (largo plazo)", value=float(round(rf_l * 100, 3)), step=0.1, help=txt_rf) / 100
     beta_u = c3.number_input("Beta", value=float(round(b["beta"], 3)) if not np.isnan(b["beta"]) else 1.0, step=0.05)
     prm = c4.number_input("Prima de riesgo de mercado %", value=6.0, step=0.25) / 100
     c5, c6, c7, c8 = st.columns(4)
@@ -161,6 +162,7 @@ def _dcf(df):
     D = c10.number_input("Deuda (D)", value=D_def, format="%.0f")
     DN = c11.number_input("Deuda neta", value=DN_def, format="%.0f")
     medio = c12.checkbox("Ajuste a mitad de año", False)
+    st.caption(f"Tasa libre de riesgo: {txt_rf}. Prima de mercado, crecimientos y g son supuestos del analista.")
     crec_txt = st.text_input("Crecimientos anuales del FCFF % (separados por coma)", "6, 6, 5, 5, 4")
     g = st.number_input("Crecimiento terminal %", value=3.5, step=0.1) / 100
     try:

@@ -59,6 +59,13 @@ with st.sidebar:
                                   "fila": None if fila is None else fila.to_dict()}
     st.caption("Máximo 1 año de historia. Los datos se consultan a Yahoo Finance cada vez que abre la página "
                "(caché de 1 hora).")
+    t_auto = cm.tasas_auto()
+    if t_auto:
+        st.caption(f"Tasas Banxico: automáticas · {cm.rf_corto()[1].replace('Automática: ', '')}")
+    elif cm.token_banxico():
+        st.caption(f"Tasas Banxico: error de consulta ({st.session_state.get('error_banxico', '')}); se usan valores de respaldo.")
+    else:
+        st.caption("Tasas Banxico: sin token (configure BANXICO_TOKEN en Secrets para automatizarlas).")
     st.divider()
     pagina = st.radio("Menú", list(MENU), key="menu", label_visibility="collapsed")
     st.divider()

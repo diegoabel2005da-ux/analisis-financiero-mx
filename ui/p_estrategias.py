@@ -23,11 +23,17 @@ def _base():
 
 def _mercado(key):
     c = st.columns(5)
-    r = c[0].number_input("Tasa libre de riesgo %", value=7.0, step=0.1, key=f"r_{key}") / 100
-    q = c[1].number_input("Dividendo %", value=0.0, step=0.1, key=f"q_{key}") / 100
-    dias = c[2].number_input("Días al vencimiento", 1, 1100, 91, key=f"d_{key}")
+    rf, txt_r = cm.rf_corto()
+    qd, txt_q = cm.dividendo_auto()
+    hoy = cm.dat.ahora_mx().date()
+    prox = cm.vencimientos(1)[0]
+    r = c[0].number_input("Tasa libre de riesgo % (cont.)", value=float(round(rf * 100, 4)), step=0.1, key=f"r_{key}", help=txt_r) / 100
+    q = c[1].number_input("Dividendo % (cont.)", value=float(round(qd * 100, 4)), step=0.1, key=f"q_{key}", help=txt_q) / 100
+    dias = c[2].number_input("Días al vencimiento", 1, 1100, max((prox - hoy).days, 1), key=f"d_{key}",
+                             help=f"Predeterminado: próximo vencimiento MexDer {prox} (tercer viernes, ciclo trimestral)")
     mo = c[3].number_input("Multiplicador opciones", value=100.0, key=f"mo_{key}")
     mf = c[4].number_input("Multiplicador futuros", value=100.0, key=f"mf_{key}")
+    st.caption(f"Tasa: {txt_r} · Dividendo: {txt_q} · Vencimiento predeterminado: {prox}")
     return r, q, dias / 365, mo, mf
 
 

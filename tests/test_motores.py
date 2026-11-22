@@ -371,3 +371,25 @@ def test_matriz_tasas_cinco_y_signos():
     assert cap > sin
     ma, _ = sc.matriz_tasas(c, dt.date(2026, 11, 23), per, [1e7] * len(per), "activo", 0.0, 0.2, "Black-76", "al inicio")
     assert ma[ma.escenario.str.startswith("1")]["choque_paralelo_bp"].iloc[0] < 0  # baja = adverso para activo
+
+
+# ------------------------------------------------------------------ automatización
+from core import auto
+
+
+def test_tercer_viernes_y_vencimientos():
+    assert auto.tercer_viernes(2026, 12) == dt.date(2026, 12, 18)
+    assert auto.tercer_viernes(2027, 3) == dt.date(2027, 3, 19)
+    v = auto.proximos_vencimientos(dt.date(2026, 11, 22), 4)
+    assert v == [dt.date(2026, 12, 18), dt.date(2027, 3, 19), dt.date(2027, 6, 18), dt.date(2027, 9, 17)]
+    assert auto.proximos_vencimientos(dt.date(2026, 12, 18), 1) == [dt.date(2026, 12, 18)]
+    assert auto.ajustar_inhabil(dt.date(2026, 12, 18), {dt.date(2026, 12, 18)}) == dt.date(2026, 12, 17)
+
+
+def test_conversion_tasa_y_dividendo():
+    rc = auto.simple_a_continua(7.0, 28)
+    assert math.exp(rc * 28 / 365) == pytest.approx(1 + 0.07 * 28 / 360)
+    div = pd.Series([0.5, 0.6, 0.7], index=pd.to_datetime(["2025-06-01", "2026-04-01", "2026-10-01"]).tz_localize("UTC"))
+    q, txt = auto.dividendo_continuo(div, 50.0, dt.date(2026, 11, 22))
+    assert q == pytest.approx(math.log(1 + 1.3 / 50))
+    assert auto.dividendo_continuo(None, 50, dt.date(2026, 11, 22))[0] == 0.0

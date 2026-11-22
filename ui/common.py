@@ -48,6 +48,66 @@ def info(simbolo: str):
         return {}, f"{type(e).__name__}: {e}"
 
 
+def token_banxico() -> str:
+    try:
+        tk = st.secrets.get("BANXICO_TOKEN", "")
+    except Exception:
+        tk = ""
+    return tk or st.session_state.get("tk_banxico", "")
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner="Consultando tasas en Banxico…")
+def _tasas_banxico(token: str):
+    from core import auto
+    try:
+        return auto.tasas_banxico(token), None
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+
+def tasas_auto() -> dict | None:
+    """Tasas de Banxico (caché de 6 h). None si no hay token o falla la consulta."""
+    tk = token_banxico()
+    if not tk:
+        return None
+    t, err = _tasas_banxico(tk)
+    if err:
+        st.session_state["error_banxico"] = err
+    return t
+
+
+RF_RESPALDO = 0.07
+
+
+def rf_corto() -> tuple[float, str]:
+    t = tasas_auto()
+    if t and "rf_corto" in t:
+        return t["rf_corto"], "Automática: " + t["rf_corto_txt"]
+    return RF_RESPALDO, "Valor de respaldo 7% (sin token de Banxico): edítelo o configure BANXICO_TOKEN"
+
+
+def rf_largo() -> tuple[float, str]:
+    t = tasas_auto()
+    if t and "rf_largo" in t:
+        return t["rf_largo"], "Automática: " + t["rf_largo_txt"]
+    return 0.09, "Valor de respaldo 9% (sin token de Banxico): edítelo o configure BANXICO_TOKEN"
+
+
+def dividendo_auto() -> tuple[float, str]:
+    from core import auto
+    a = activo_actual()
+    df, _, _ = datos_activo()
+    if df.empty:
+        return 0.0, "Sin precio"
+    inf, _ = info(a["simbolo"])
+    return auto.dividendo_continuo((inf or {}).get("dividends"), float(df["Close"].iloc[-1]), dat.ahora_mx().date())
+
+
+def vencimientos(n=4):
+    from core import auto
+    return auto.proximos_vencimientos(dat.ahora_mx().date(), n)
+
+
 def activo_actual() -> dict:
     return st.session_state.get("activo", {})
 

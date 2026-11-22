@@ -38,6 +38,18 @@ ANTHROPIC_API_KEY = "tu_clave"      # sólo si quieres respuestas libres del asi
 Sin token de Banxico puedes capturar o importar la curva de tasas manualmente. Sin clave de Anthropic el asistente
 explica los resultados con reglas fijas.
 
+## Qué se actualiza solo
+- Precios, estados financieros y dividendos (Yahoo) cada vez que se abre la página.
+- Con `BANXICO_TOKEN` en Secrets: tasa libre de riesgo (Cetes 28 días, convertida a tasa continua), tasa de largo plazo del
+  DCF (Bono M 10 años si Banxico confirma la serie; si no, Cetes 364), curva de tasas (TIIE de Fondeo + Cetes) y
+  volatilidad histórica de tasas. Caché de 6 horas.
+- Rendimiento por dividendo: pagos de los últimos 12 meses (Yahoo) / último precio.
+- Vencimientos de MexDer: se calculan por regla (tercer viernes de marzo, junio, septiembre y diciembre, o el día hábil
+  anterior). Si un tercer viernes es día inhábil, agrégalo a `data/dias_inhabiles.csv` (columnas `fecha,descripcion`).
+- Todos estos valores siguen siendo editables en pantalla y muestran su fuente.
+
+Lo único manual: precios observados de futuros, primas de opciones y AIM de MexDer (no hay fuente gratuita automática).
+
 ## Qué hace cada sección
 1 Inicio · 2 Emisoras (catálogo MexDer + tablero) · 3 Datos históricos (7 periodicidades, validación, reconciliación) ·
 4 Análisis y valuación (ROC, Williams, estocástico, RSI 9/14/25, Fibonacci, DCF/WACC, múltiplos) · 5 Estados financieros ·

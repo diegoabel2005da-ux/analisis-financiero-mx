@@ -1,0 +1,34 @@
+emisora,serie,clave_bmv,simbolo_yahoo,sector,bolsa,moneda,futuro_mexder,opcion_mexder,clave_futuro,clave_opcion,isin,estado,fecha_revision,fuente_revision
+AGUA,*,AGUA*,AGUA.MX,Industrial,BMV,MXN,SI,NO,AGUA,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+AGUILAS,CPO,AGUILAS CPO,AGUILASCPO.MX,Bienes raíces / Esparcimiento,BMV,MXN,SI,NO,AGLS,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+ALSEA,*,ALSEA*,ALSEA.MX,Consumo discrecional,BMV,MXN,SI,NO,ASA,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+AMX,B,AMX B,AMXB.MX,Telecomunicaciones,BMV,MXN,SI,SI,,AX,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+ASUR,B,ASUR B,ASURB.MX,Industrial / Aeropuertos,BMV,MXN,SI,NO,ASUR,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+BIMBO,A,BIMBO A,BIMBOA.MX,Consumo básico,BMV,MXN,SI,SI,BIM,BI,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+BOLSA,A,BOLSA A,BOLSAA.MX,Servicios financieros,BMV,MXN,SI,SI,,BO,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+CEMEX,CPO,CEMEX CPO,CEMEXCPO.MX,Materiales,BMV,MXN,SI,SI,CXC,CX,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+CHDRAUI,B,CHDRAUI B,CHDRAUIB.MX,Consumo básico,BMV,MXN,SI,SI,,CH,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+CUERVO,*,CUERVO*,CUERVO.MX,Consumo básico,BMV,MXN,SI,SI,CUER,CU,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+FEMSA,UBD,FEMSA UBD,FEMSAUBD.MX,Consumo básico,BMV,MXN,SI,SI,FEM,FE,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+FRAGUA,B,FRAGUA B,FRAGUAB.MX,Consumo básico,BMV,MXN,SI,NO,FRAG,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+GAP,B,GAP B,GAPB.MX,Industrial / Aeropuertos,BMV,MXN,SI,SI,GAP,GP,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+GCARSO,A1,GCARSO A1,GCARSOA1.MX,Industrial / Conglomerado,BMV,MXN,SI,NO,GCA,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+GISSA,A,GISSA A,GISSAA.MX,Industrial,BMV,MXN,SI,NO,GSSA,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+GMEXICO,B,GMEXICO B,GMEXICOB.MX,Materiales / Minería,BMV,MXN,SI,SI,GMEX,GM,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+GRUMA,B,GRUMA B,GRUMAB.MX,Consumo básico,BMV,MXN,SI,SI,GRU,GR,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+KOF,UBL,KOF UBL,KOFUBL.MX,Consumo básico,BMV,MXN,SI,SI,KOF,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+KUO,B,KUO B,KUOB.MX,Industrial / Conglomerado,BMV,MXN,SI,NO,KUO,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+LACOMER,UBC,LACOMER UBC,LACOMERUBC.MX,Consumo básico,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+LIVEPOL,C-1,LIVEPOL C-1,LIVEPOLC-1.MX,Consumo discrecional,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+MEDICA,B,MEDICA B,MEDICAB.MX,Salud,BMV,MXN,SI,NO,,,,"Listado en página de contratos de futuro",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+OMA,B,OMA B,OMAB.MX,Industrial / Aeropuertos,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+ORBIA,*,ORBIA*,ORBIA.MX,Materiales / Químicos,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+PENOLES,*,PE&OLES*,PE&OLES.MX,Materiales / Minería,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+PINFRA,*,PINFRA*,PINFRA.MX,Industrial / Infraestructura,BMV,MXN,SI,SI,,PI,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+SIGMAF,A,SIGMAF A,SIGMAFA.MX,Consumo básico,BMV,MXN,SI,NO,,,,"Listado en página de contratos de futuro; símbolo Yahoo por verificar",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+TLEVISA,CPO,TLEVISA CPO,TLEVISACPO.MX,Medios,BMV,MXN,SI,SI,,TV,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+VESTA,*,VESTA*,VESTA.MX,Bienes raíces industriales,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+VOLAR,A,VOLAR A,VOLARA.MX,Industrial / Aerolínea,BMV,MXN,SI,SI,,,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+WALMEX,*,WALMEX*,WALMEX.MX,Consumo básico,BMV,MXN,SI,SI,,WA,,"Listado en páginas de futuro y opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro
+NAFTRAC,ISHRS,NAFTRAC ISHRS,NAFTRACISHRS.MX,ETF sobre S&P/BMV IPC,BMV,MXN,NO,SI,,,,"Listado en página de contratos de opción",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_opcion
+IPC,INDICE,S&P/BMV IPC,^MXX,Índice de referencia,BMV,MXN,SI,SI,,,,"Índice; subyacente de futuros y opciones del IPC",2026-11-21,https://www.bmv.com.mx/wb3/wb/MEX/contratos_futuro

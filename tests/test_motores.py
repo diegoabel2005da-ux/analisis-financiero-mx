@@ -506,3 +506,14 @@ def test_excel_hojas_recomendadas_conectadas():
     assert wb["NOTA ESTRUCTURADA"]["E4"].value == "='DASHBOARD'!$D$6"   # entradas del cliente en el DASHBOARD
     assert str(wb["BLACK-SCHOLES"]["C23"].value).startswith("=")         # primas por fórmula, no valores
     assert wb["DIVERSIFICACIÓN"]["G5"].value.startswith("=SUM(")
+
+
+def test_params_nota_incompletos_se_detectan():
+    from core import nota as nt
+    assert not nt.params_completos(None)
+    assert not nt.params_completos({"config": {}, "acciones": []})          # p. ej. guardados por una versión anterior
+    p = nt.preparar(nt.PARAMS_EJEMPLO, "X", 100.0, 0.3, 1.0, 0.07, 0.0, 0.15,
+                    renta_fija={"tasas": {"cetes": {28: 0.06}, "bono_m": {10: 0.095}, "bondes_f_sobretasa": 0.002, "tiie_fondeo": 0.07,
+                                          "udibono_real": {20: 0.047}}, "inflacion": 0.03, "udi": 8.8},
+                    futuros_cat=__import__("core.futuros_multi", fromlist=["x"]).preparar_catalogo({"ZN": 112.5}, {"ZN": 0.06}, 18.0))
+    assert nt.params_completos(p)

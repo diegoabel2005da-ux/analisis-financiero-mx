@@ -265,3 +265,13 @@ CUANDO_CONVIENE = {
     "COLLAR": ("Banda de protección de bajo costo: piso con la put y techo con la call", "Se posee el activo y se acepta ceder parte del alza por proteger la baja"),
     "STRADDLE": ("Ganar con volatilidad alta alrededor del precio actual", "Se espera un movimiento fuerte inminente"),
 }
+
+
+CLAVES_REQUERIDAS = ("perfiles", "config", "acciones", "inversion", "dias", "prm", "rf_anual", "sigma_ipc", "derivados", "legs",
+                     "renta_fija", "renta_fija_in", "renta_fija_tabla", "futuros_cat", "futuros")
+
+
+def params_completos(p) -> bool:
+    """True si p tiene todo lo que necesitan calcular() y el Excel (p. ej. parámetros guardados por una versión anterior no)."""
+    return isinstance(p, dict) and all(k in p for k in CLAVES_REQUERIDAS) and all(pf in p["config"] for pf in p["perfiles"])
+

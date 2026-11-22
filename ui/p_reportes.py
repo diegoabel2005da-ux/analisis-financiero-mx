@@ -192,8 +192,17 @@ def params_integral():
         "rsi_wilder": {n: float(ta.rsi_wilder(datos["Close"], n).iloc[-1]) for n in (9, 14, 25)},
         "primas_obs": {}, "f_obs": f_obs, "n_fut": n_fut, "mult_fut": m_fut, "mult": 100,
         "confianza": 0.95, "monto": 1_000_000.0, "dias_var": max((prox - hoy).days, 1),
-        "nota": r.get("nota_params") or _nota_por_defecto(),
+        "nota": _nota_vigente(r.get("nota_params")),
     }, None
+
+
+def _nota_vigente(guardada):
+    """Usa la nota calculada en la sección 17 si está completa; si viene de una versión anterior, la reconstruye."""
+    from core import nota as nt
+    if nt.params_completos(guardada):
+        return guardada
+    st.session_state.get("res", {}).pop("nota_params", None)
+    return _nota_por_defecto()
 
 
 def _nota_por_defecto():

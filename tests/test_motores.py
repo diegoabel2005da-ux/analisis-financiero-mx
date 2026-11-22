@@ -427,12 +427,82 @@ def test_nota_reproduce_archivo_usuario():
     assert res.loc["MODERADO", "CAPITALES"] == pytest.approx(21150)
     assert res.loc["CONSERVADOR", "CAPITALES"] == pytest.approx(19920)
     assert res.loc["AGRESIVO", "KRF $"] == pytest.approx(400_000)
-    assert res.loc["AGRESIVO", "KRF al vencimiento"] == pytest.approx(400_000 * (1 + 0.0669 * 91 / 360))
+    assert res.loc["AGRESIVO", "KRF al horizonte"] == pytest.approx(400_000 * (1 + 0.0669 * 91 / 360))
     der = r["derivados"].set_index("perfil")
-    assert der.loc["AGRESIVO", "monto"] == pytest.approx(1_280_000)  # = L26 del archivo
+    assert der.loc["AGRESIVO", "monto derivados"] == pytest.approx(1_280_000)  # = L26 del archivo
     assert der.loc["CONSERVADOR", "monto opciones"] == pytest.approx(72_000)
     assert (r["escenarios"].groupby("perfil").size() == 5).all()
     base = r["escenarios"][r["escenarios"].z == 0].set_index("perfil")["NE"]
     assert base["MODERADO"] == pytest.approx(res.loc["MODERADO", "NE"])
-    f = r["futuros"].set_index("perfil")
-    assert (f["garantía depositada"] <= der["monto futuros"] + 1e-9).all()
+
+
+def test_renta_fija_formulas_y_seleccion():
+    from core import renta_fija as rf
+    # Banxico, anexo CETES: rendimiento 4.39% a 91 días → precio 9.8902486
+    assert rf.precio_cete(0.0439, 91) == pytest.approx(9.8902486, abs=1e-6)
+    tasas = {"cetes": {28: 0.06, 91: 0.062, 364: 0.068}, "bono_m": {10: 0.095}, "bondes_f_sobretasa": 0.002, "tiie_fondeo": 0.07,
+             "udibono_real": {20: 0.047}}
+    t = rf.evaluar(tasas, 91, 1_000_000, 0.03, 8.8)
+    c91 = t[t.instrumento == "CETES 91 días"].iloc[0]
+    assert c91["rend_horizonte"] == pytest.approx(0.062 * 91 / 360)
+    assert c91["duración_al_vender"] == 0
+    c364 = t[t.instrumento == "CETES 364 días"].iloc[0]
+    assert c364["rend_horizonte"] == pytest.approx((1 + 0.068 * 364 / 360) / (1 + 0.068 * 273 / 360) - 1)
+    _, sel_c = rf.seleccionar(t, 91, "CONSERVADOR")
+    assert sel_c["tipo"] in ("CETES", "BONDES F")  # el conservador no compra plazos largos de tasa fija
+    _, sel_a = rf.seleccionar(t, 91, "AGRESIVO")
+    assert sel_a["rend_horizonte"] >= sel_c["rend_horizonte"]
+
+
+def test_futuros_asignacion_y_perfil():
+    from core import futuros_multi as fm, perfil as pf
+    precios = {"ES": 6800, "ZN": 112.5, "GC": 4100, "6M": 0.054, "CL": 62, "MCL": 62, "ZC": 440}
+    vols = {k: 0.2 for k in precios}
+    cat = fm.preparar_catalogo(precios, vols, 18.0)
+    a = fm.asignar(cat, 500_000, fm.MEZCLA["MODERADO"], stop_pct=0.05)
+    assert a["garantía_MXN"].sum() <= 500_000 + 1e-6
+    assert (a["contratos"] >= 0).all() and a["contratos"].dtype.kind == "i"
+    zn = cat[cat.clave == "ZN"].iloc[0]
+    assert zn["valor_contrato_MXN"] == pytest.approx(112.5 * 1000 * 18.0)
+    tot, d = fm.pnl(a, -2.5, 91, stop_pct=0.05)
+    assert tot >= -(a["nocional_MXN"].sum() * 0.05) - 1e-6  # el stop limita la pérdida
+    r = {k: 0 for k, _, _ in pf.PREGUNTAS}
+    assert pf.puntaje(r) == 0 and pf.asignacion(r)["krf_pct"] == pytest.approx(0.80) and pf.asignacion(r)["fut_pct"] == 0
+    r3 = {k: 3 for k, _, _ in pf.PREGUNTAS}
+    assert pf.asignacion(r3)["krf_pct"] == pytest.approx(0.15) and pf.perfil_referencia(1.0) == "AGRESIVO"
+
+
+def test_tope_de_primas_pasa_a_renta_fija():
+    from core import nota as nt
+    p = nt.preparar(nt.PARAMS_EJEMPLO, "X", 100.0, 0.3, 1.0, 0.07, 0.0, 0.15)
+    sin = nt.calcular(p)["diversificacion"].set_index("perfil")
+    p["tope_primas_pct"] = 0.05
+    con = nt.calcular(p)["diversificacion"].set_index("perfil")
+    inv = p["inversion"]
+    for pf in p["perfiles"]:
+        assert con.loc[pf, "opciones (primas) $"] <= 0.05 * inv + 1e-6
+        tot = con.loc[pf, ["renta fija $", "capitales $", "futuros (garantía) $", "opciones (primas) $"]].sum()
+        assert tot == pytest.approx(inv)  # todo el capital sigue asignado
+    assert con.loc["AGRESIVO", "renta fija $"] == pytest.approx(sin.loc["AGRESIVO", "renta fija $"] + sin.loc["AGRESIVO", "opciones (primas) $"] - 0.05 * inv)
+
+
+def test_excel_hojas_recomendadas_conectadas():
+    import io, openpyxl
+    from core import nota as nt, reports_integral as ri, futuros_multi as fm
+    df = _serie(120)
+    mk = _serie(120, semilla=7) * 300
+    datos = ri.datos_desde_df(df, mk)
+    cat = fm.preparar_catalogo({"ZN": 112.5, "6M": 0.054, "MCL": 62, "ZC": 440}, {"ZN": 0.06, "6M": 0.1, "MCL": 0.35, "ZC": 0.2}, 18.0)
+    tasas = {"cetes": {28: 0.06, 91: 0.062}, "bono_m": {10: 0.095}, "bondes_f_sobretasa": 0.002, "tiie_fondeo": 0.07, "udibono_real": {20: 0.047}}
+    pn = nt.preparar(nt.PARAMS_EJEMPLO, "PRUEBA", float(datos["Close"].iloc[-1]), 0.25, 1.0, 0.07, 0.0, 0.15,
+                     renta_fija={"tasas": tasas, "inflacion": 0.03, "udi": 8.8}, futuros_cat=cat)
+    p = {"emisora": "PRUEBA", "datos": datos, "spot": float(datos["Close"].iloc[-1]), "r": 0.07, "q": 0.0, "dias": 30,
+         "k_straddle": 100.0, "k_call_strangle": 105.0, "k_put_strangle": 95.0, "paso": 0.5, "paso_btfl": 0.5,
+         "tendencia": 101.0, "rsi_wilder": {9: 50.0, 14: 50.0, 25: 50.0}, "primas_obs": {}, "confianza": 0.95,
+         "monto": 1e6, "dias_var": 30, "nota": pn}
+    wb = openpyxl.load_workbook(io.BytesIO(ri.excel_integral({"meta": {"Activo": "PRUEBA"}}, p, incluir_plataforma=False)))
+    assert wb.sheetnames[:11] == ["DASHBOARD", "PERFIL", "RENTA FIJA", "MERCADO DE CAPITALES", "FUTUROS MULTIACTIVO", "OPCIONES Y ESTRATEGIAS",
+                                  "BLACK-SCHOLES", "DIVERSIFICACIÓN", "ESCENARIOS DE LA NOTA", "REPORTE EJECUTIVO", "NOTA ESTRUCTURADA"]
+    assert wb["NOTA ESTRUCTURADA"]["E4"].value == "='DASHBOARD'!$D$6"   # entradas del cliente en el DASHBOARD
+    assert str(wb["BLACK-SCHOLES"]["C23"].value).startswith("=")         # primas por fórmula, no valores
+    assert wb["DIVERSIFICACIÓN"]["G5"].value.startswith("=SUM(")

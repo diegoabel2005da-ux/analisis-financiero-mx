@@ -606,7 +606,10 @@ def excel_integral(estudio: dict, p: dict, incluir_plataforma: bool = True) -> b
         hoja_mariposa(wb, f, p, info, celdas)
         if p.get("nota"):
             from .reports_nota import hoja_nota
-            hoja_nota(wb, f, p["nota"], info["ult"])
+            pn = p["nota"]
+            rn = hoja_nota(wb, f, pn, info["ult"], respuestas=pn.get("respuestas"), fuentes=pn.get("fuentes"), usdmxn=pn.get("usdmxn", 18.0))
+            from . import reports_hojas10 as h10
+            h10.agregar_hojas(wb, f, pn, rn["excel"], pn.get("fecha_valuacion"))
         # gráficas de la hoja BS (straddle long put / long call), como en el archivo de referencia
         ws_bs = wb.get_worksheet_by_name(H_BS)
         for titulo, pos, color in [("LONG PUT", "B22", TURQ), ("LONG CALL", "I22", AZUL)]:
@@ -618,6 +621,8 @@ def excel_integral(estudio: dict, p: dict, incluir_plataforma: bool = True) -> b
         if incluir_plataforma:
             resto = [h for h in rp.HOJAS if h not in ("Portada", "Datos históricos")]
             rp.escribir_hojas(xw, estudio, resto)
+        if p.get("nota"):
+            h10.ordenar(wb)
     return buf.getvalue()
 
 

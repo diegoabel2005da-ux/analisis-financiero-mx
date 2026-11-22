@@ -57,7 +57,9 @@ Lo único manual: precios observados de futuros, primas de opciones y AIM de Mex
 8 Futuros (AIM y ajustes diarios) · 9 Opciones (BSM, griegas, CRR, volatilidad implícita) · 10 Derivados de tasas
 (Banxico, curvas) · 11 Caps y floors (Black-76/Bachelier, sensibilidades, escenarios) · 12 Estrategias · 13 Coberturas ·
 14 Perfiles y escenarios (3 perfiles × estrategias × 5 escenarios) · 15 Reportes (IA; Excel en formato INTEGRAL con nota estructurada o estándar de 17 hojas; PDF) ·
-16 Estudios guardados y auditoría · 17 Nota estructurada (KRF + capitales + derivados por perfil, con 5 escenarios).
+16 Estudios guardados y auditoría · 17 Nota estructurada: perfilador de 10 preguntas (perfil PERSONALIZADO además de los 3 de referencia), comparador de renta fija (Cetes, Bonos M, Bondes F, Udibonos) con selección automática, acciones de BMV y NYSE/NASDAQ con betas y correlaciones, 16 futuros de 6 clases de activo diversificados por margen, estrategias con opciones (straddle, strangle, collar, cap, floor, butterfly, call), stop-loss, escenarios adversos/neutral/optimistas, ficha de condiciones, tope de primas opcional y reporte ejecutivo en PDF.
+
+**Excel de la nota (formato INTEGRAL):** abre en la hoja DASHBOARD, donde se capturan monto, horizonte, prima de mercado, tasa y tope de primas. Siguen las 10 hojas recomendadas por el Proyecto Integrador (PERFIL, RENTA FIJA, MERCADO DE CAPITALES, FUTUROS MULTIACTIVO, OPCIONES Y ESTRATEGIAS, BLACK-SCHOLES, DIVERSIFICACIÓN, ESCENARIOS DE LA NOTA y REPORTE EJECUTIVO), el motor NOTA ESTRUCTURADA y las hojas del formato del curso. Todo está conectado por fórmulas.
 
 ## Fuentes y limitaciones (importante)
 - **Precios:** Yahoo Finance es un proveedor secundario con retraso; no es el cierre oficial de la BMV. Puedes reconciliar

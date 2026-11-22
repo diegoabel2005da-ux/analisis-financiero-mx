@@ -197,8 +197,11 @@ def params_integral():
 
 
 def _nota_por_defecto():
+    import copy
+    from core import nota as nt
     from . import p_nota
-    return p_nota.construir(p_nota.base_actual())
+    return p_nota.construir(copy.deepcopy(st.session_state.get("nota_base", nt.PARAMS_EJEMPLO)),
+                            st.session_state.get("nota_resp"), st.session_state.get("nota_margenes"))
 
 
 def reportes():

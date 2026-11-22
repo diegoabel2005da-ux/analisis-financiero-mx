@@ -11,7 +11,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from core import reports as rp, ai, audit, data as dat  # noqa: E402
+from core import reports as rp, reports_integral as ri, ai, audit, data as dat, technical as ta  # noqa: E402
 from . import common as cm  # noqa: E402
 
 METODOLOGIA = ("Datos diarios de Yahoo Finance (proveedor secundario) sin ajuste automático; validación de consistencia OHLCV y "
@@ -57,6 +57,9 @@ def _contexto():
         ctx["ratios"] = r["ratios"][["ratio", "valor", "estado"]].to_dict("records")
     if isinstance(r.get("opciones"), pd.DataFrame):
         ctx["opciones"] = r["opciones"].to_dict("records")
+    if r.get("nota"):
+        ctx["nota_estructurada"] = {"resumen": r["nota"]["resumen"].round(2).to_dict("records"),
+                                    "escenarios": r["nota"]["escenarios"][["perfil", "escenario", "NE", "NE %"]].round(4).to_dict("records")}
     if isinstance(r.get("patrones"), pd.DataFrame) and not r["patrones"].empty:
         ctx["patrones"] = r["patrones"][[c for c in ["figura", "estado", "inicio", "fin"] if c in r["patrones"]]].astype(str).to_dict("records")
     return ctx
@@ -151,6 +154,53 @@ def _graficas(est):
     return g
 
 
+def params_integral():
+    """Parámetros del Excel INTEGRAL tomados de la sesión (o valores automáticos documentados)."""
+    a = cm.activo_actual()
+    df, meta, err = cm.datos_activo()
+    mk, _, _ = cm.datos_mercado()
+    if df.empty or mk.empty:
+        return None, "Se requieren precios de la emisora y del IPC."
+    datos = ri.datos_desde_df(df, mk)
+    if len(datos) < 40:
+        return None, "Se requieren al menos 40 fechas comunes con el IPC (amplíe el período)."
+    r = st.session_state["res"]
+    spot = float(datos["Close"].iloc[-1])
+    rf, txt_r = cm.rf_corto()
+    qd, txt_q = cm.dividendo_auto()
+    hoy = dat.ahora_mx().date()
+    prox = cm.vencimientos(1)[0]
+    op = r.get("opciones")
+    k_std = float(op["strike"].iloc[0]) if isinstance(op, pd.DataFrame) and not op.empty else ri.strike_redondo(spot, spot)
+    reg = ta.regresion_tendencia(datos["Close"])
+    tendencia = float(reg["ajuste"].iloc[-1]) if reg else spot
+    fu = r.get("futuros")
+    f_obs = 0.0
+    n_fut, m_fut = 1, 100
+    if isinstance(fu, pd.DataFrame) and not fu.empty:
+        if str(fu["origen_precio"].iloc[0]).startswith("observado"):
+            f_obs = float(fu["precio_futuro"].iloc[0])
+        n_fut, m_fut = int(fu["contratos"].iloc[0]), float(fu["multiplicador"].iloc[0])
+    return {
+        "emisora": a["nombre"].replace("*", "").strip(), "datos": datos, "spot": spot, "r": rf, "q": qd,
+        "fuente_r": txt_r, "fuente_q": txt_q, "dias": max((prox - hoy).days, 1),
+        "fuente_dias": f"Próximo vencimiento MexDer {prox} (tercer viernes, ciclo trimestral)",
+        "k_straddle": k_std, "k_call_strangle": ri.strike_redondo(spot * 1.05, spot),
+        "k_put_strangle": ri.strike_redondo(spot * 0.95, spot), "paso": ri.paso_redondo(spot),
+        "paso_btfl": ri.paso_redondo(spot), "tendencia": round(tendencia, 2),
+        "fuente_tendencia": "Valor de la recta de tendencia log-lineal (regresión MCO) en la última fecha; editable.",
+        "rsi_wilder": {n: float(ta.rsi_wilder(datos["Close"], n).iloc[-1]) for n in (9, 14, 25)},
+        "primas_obs": {}, "f_obs": f_obs, "n_fut": n_fut, "mult_fut": m_fut, "mult": 100,
+        "confianza": 0.95, "monto": 1_000_000.0, "dias_var": max((prox - hoy).days, 1),
+        "nota": r.get("nota_params") or _nota_por_defecto(),
+    }, None
+
+
+def _nota_por_defecto():
+    from . import p_nota
+    return p_nota.construir(p_nota.base_actual())
+
+
 def reportes():
     st.title("Reportes e interpretación")
     t1, t2, t3 = st.tabs(["Asistente de IA explicativa", "Informe Excel", "Informe PDF"])
@@ -184,10 +234,23 @@ def reportes():
                 st.session_state["resumen_ejecutivo"] = txt
     est = None
     with t2:
-        st.write("Libro con 17 hojas: " + ", ".join(rp.HOJAS) + ". Incluye fórmulas auditables en Datos históricos y DCF.")
+        formato = st.radio("Formato", ["Integral (formato de referencia) + análisis de la plataforma", "Estándar (17 hojas)"])
+        if formato.startswith("Integral"):
+            st.write("Hojas: Portada · DATOS · TENDENCIAS RSI · BS · STRADDLE CALL|PUT · STRANGLE CALL|PUT · COMPRA VTA FUT · "
+                     "BTFL CALL|PUT · NOTA ESTRUCTURADA · y las hojas de análisis de la plataforma (estados financieros, ratios, DCF, riesgo, "
+                     "escenarios, caps y floors…). Todo con fórmulas vivas: cambie un strike o una tasa y el libro se recalcula.")
+        else:
+            st.write("Libro con 17 hojas: " + ", ".join(rp.HOJAS) + ". Incluye fórmulas auditables en Datos históricos y DCF.")
         if st.button("Preparar Excel"):
             est = _estudio()
-            st.session_state["xlsx"] = rp.excel(est)
+            if formato.startswith("Integral"):
+                p, err = params_integral()
+                if err:
+                    st.error(err)
+                else:
+                    st.session_state["xlsx"] = ri.excel_integral(est, p)
+            else:
+                st.session_state["xlsx"] = rp.excel(est)
         if st.session_state.get("xlsx"):
             st.download_button("Descargar Excel", st.session_state["xlsx"], f"analisis_{cm.activo_actual().get('simbolo')}.xlsx",
                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

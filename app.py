@@ -9,7 +9,7 @@ import streamlit as st
 st.set_page_config(page_title="Plataforma de Análisis Financiero MX", page_icon="📈", layout="wide")
 
 from ui import common as cm  # noqa: E402
-from ui import p_mercado, p_analisis, p_derivados, p_estrategias, p_reportes  # noqa: E402
+from ui import p_mercado, p_analisis, p_derivados, p_estrategias, p_reportes, p_nota  # noqa: E402
 
 cm.estado()
 st.markdown(cm.CSS, unsafe_allow_html=True)
@@ -31,6 +31,7 @@ MENU = {
     "14. Perfiles y escenarios": p_estrategias.perfiles_escenarios,
     "15. Reportes": p_reportes.reportes,
     "16. Estudios guardados": p_reportes.estudios,
+    "17. Nota estructurada": p_nota.nota_estructurada,
 }
 
 with st.sidebar:

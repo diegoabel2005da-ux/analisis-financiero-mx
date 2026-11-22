@@ -56,8 +56,8 @@ Lo único manual: precios observados de futuros, primas de opciones y AIM de Mex
 6 Patrones y riesgos (tendencias, beta, VaR/ES, correlaciones, liquidez) · 7 Análisis gráfico (chartismo + dibujo manual) ·
 8 Futuros (AIM y ajustes diarios) · 9 Opciones (BSM, griegas, CRR, volatilidad implícita) · 10 Derivados de tasas
 (Banxico, curvas) · 11 Caps y floors (Black-76/Bachelier, sensibilidades, escenarios) · 12 Estrategias · 13 Coberturas ·
-14 Perfiles y escenarios (3 perfiles × estrategias × 5 escenarios) · 15 Reportes (IA, Excel de 17 hojas, PDF) ·
-16 Estudios guardados y auditoría.
+14 Perfiles y escenarios (3 perfiles × estrategias × 5 escenarios) · 15 Reportes (IA; Excel en formato INTEGRAL con nota estructurada o estándar de 17 hojas; PDF) ·
+16 Estudios guardados y auditoría · 17 Nota estructurada (KRF + capitales + derivados por perfil, con 5 escenarios).
 
 ## Fuentes y limitaciones (importante)
 - **Precios:** Yahoo Finance es un proveedor secundario con retraso; no es el cierre oficial de la BMV. Puedes reconciliar

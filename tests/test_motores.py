@@ -393,3 +393,46 @@ def test_conversion_tasa_y_dividendo():
     q, txt = auto.dividendo_continuo(div, 50.0, dt.date(2026, 11, 22))
     assert q == pytest.approx(math.log(1 + 1.3 / 50))
     assert auto.dividendo_continuo(None, 50, dt.date(2026, 11, 22))[0] == 0.0
+
+
+# ------------------------------------------------------------------ Excel formato INTEGRAL
+def test_excel_integral_genera_hojas():
+    import io, openpyxl
+    from core import reports_integral as ri
+    df = _serie(120)
+    mk = _serie(120, semilla=7) * 300
+    datos = ri.datos_desde_df(df, mk)
+    p = {"emisora": "PRUEBA", "datos": datos, "spot": float(datos["Close"].iloc[-1]), "r": 0.07, "q": 0.0, "dias": 30,
+         "k_straddle": 100.0, "k_call_strangle": 105.0, "k_put_strangle": 95.0, "paso": 0.5, "paso_btfl": 0.5,
+         "tendencia": 101.0, "rsi_wilder": {9: 50.0, 14: 50.0, 25: 50.0}, "primas_obs": {}, "confianza": 0.95,
+         "monto": 1e6, "dias_var": 30}
+    b = ri.excel_integral({"meta": {"Activo": "PRUEBA"}}, p)
+    wb = openpyxl.load_workbook(io.BytesIO(b))
+    for h in ["DATOS", "TENDENCIAS RSI", "BS", "STRADDLE CALL|PUT", "STRANGLE CALL|PUT", "COMPRA VTA FUT", "BTFL CALL|PUT", "Ratios"]:
+        assert h in wb.sheetnames
+    ws = wb["STRADDLE CALL|PUT"]
+    assert ws["G11"].value.startswith("=MAX(")  # payoff con máx(S−K,0), no una resta simple
+    assert wb["DATOS"]["R8"].value == "=R6/R7"
+    assert ri.paso_redondo(225.4) == 1 and ri.paso_redondo(18.3) == pytest.approx(0.05)
+
+
+# ------------------------------------------------------------------ nota estructurada
+def test_nota_reproduce_archivo_usuario():
+    from core import nota as nt
+    p = nt.preparar(nt.PARAMS_EJEMPLO, "X", 100.0, 0.3, 1.0, 0.07, 0.0, 0.15)
+    r = nt.calcular(p)
+    res = r["resumen"].set_index("perfil")
+    # utilidades de capitales del archivo NOTA_ESTRUCTURADA (I36, H36, G36)
+    assert res.loc["AGRESIVO", "CAPITALES"] == pytest.approx(9200)
+    assert res.loc["MODERADO", "CAPITALES"] == pytest.approx(21150)
+    assert res.loc["CONSERVADOR", "CAPITALES"] == pytest.approx(19920)
+    assert res.loc["AGRESIVO", "KRF $"] == pytest.approx(400_000)
+    assert res.loc["AGRESIVO", "KRF al vencimiento"] == pytest.approx(400_000 * (1 + 0.0669 * 91 / 360))
+    der = r["derivados"].set_index("perfil")
+    assert der.loc["AGRESIVO", "monto"] == pytest.approx(1_280_000)  # = L26 del archivo
+    assert der.loc["CONSERVADOR", "monto opciones"] == pytest.approx(72_000)
+    assert (r["escenarios"].groupby("perfil").size() == 5).all()
+    base = r["escenarios"][r["escenarios"].z == 0].set_index("perfil")["NE"]
+    assert base["MODERADO"] == pytest.approx(res.loc["MODERADO", "NE"])
+    f = r["futuros"].set_index("perfil")
+    assert (f["garantía depositada"] <= der["monto futuros"] + 1e-9).all()

@@ -51,13 +51,20 @@ def _limpiar(df: pd.DataFrame) -> pd.DataFrame:
 def excel(estudio: dict) -> bytes:
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="xlsxwriter", datetime_format="yyyy-mm-dd", date_format="yyyy-mm-dd") as xw:
+        escribir_hojas(xw, estudio, HOJAS)
+    return buf.getvalue()
+
+
+def escribir_hojas(xw, estudio: dict, nombres: list[str]):
+    """Escribe las hojas estándar de la plataforma indicadas en `nombres` dentro de un ExcelWriter abierto."""
+    if True:
         wb = xw.book
         tit = wb.add_format({"bold": True, "font_size": 16, "font_color": "#0B1F3A"})
         neg = wb.add_format({"bold": True})
         num = wb.add_format({"num_format": "#,##0.00"})
         pct = wb.add_format({"num_format": "0.00%"})
         nota = wb.add_format({"italic": True, "font_color": "#666666", "text_wrap": True})
-        for nombre in HOJAS:
+        for nombre in nombres:
             if nombre == "Portada":
                 ws = wb.add_worksheet(nombre)
                 m = estudio.get("meta", {})
@@ -160,7 +167,6 @@ def excel(estudio: dict) -> bytes:
             else:
                 ws = wb.add_worksheet(nombre)
                 ws.write(0, 0, "No calculado en esta sesión o no disponible en la fuente.", nota)
-    return buf.getvalue()
 
 
 def pdf(estudio: dict, graficas: dict[str, bytes] | None = None) -> bytes:
